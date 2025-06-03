@@ -1,0 +1,97 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config-rhdh
+  namespace: demo-project
+data:
+  app-config.yaml: |
+    app:
+      title: Red Hat Developer Hub
+      baseUrl: https://rhdh.apps.cluster-qr8h2.dynamic.redhatworkshops.io
+    kubernetes:
+      serviceLocatorMethod:
+        type: 'multiTenant'  
+      clusterLocatorMethods:
+        - type: config
+          clusters:
+            - name: openshift-cluster
+              url: https://api.cluster-qr8h2.dynamic.redhatworkshops.io:6443
+              authProvider: serviceAccount
+              skipTLSVerify: true
+              serviceAccountToken: ${K8S_SA_TOKEN}
+              customResources:
+                - group: 'route.openshift.io'
+                  apiVersion: 'v1'
+                  plural: 'routes'
+                #- group: 'tekton.dev'
+                #  apiVersion: 'v1'
+                #  plural: 'pipelineruns'
+                #- group: 'tekton.dev'
+                #  apiVersion: 'v1'
+                #  plural: 'taskruns'
+    backend:
+      auth:
+        keys:
+          - secret: ${BACKEND_SECRET}
+      baseUrl: https://rhdh.apps.cluster-qr8h2.dynamic.redhatworkshops.io
+      cors:
+        origin: https://rhdh.apps.cluster-qr8h2.dynamic.redhatworkshops.io
+      reading:
+        allow:
+          - host: raw.githubusercontent.com
+          - host: springboot-route-demo-project.apps.cluster-qr8h2.dynamic.redhatworkshops.io
+          - host: api.apis.guru
+
+      # GitHub token support for backend operations (used by scaffolder)
+      integrations:
+        github:
+          - host: github.com
+            token: ${GITHUB_TOKEN}
+    integrations:
+      github:
+        - host: github.com
+          token: ${GITHUB_TOKEN}
+    auth:
+      environment: production
+      session:
+        secret: ${BACKEND_SECRET}
+      providers:
+        oidc:
+          production:
+            metadataUrl: "https://keycloak-rhdh-operator.apps.cluster-qr8h2.dynamic.redhatworkshops.io/realms/rhdh"
+            clientId: rhdh
+            clientSecret: developer-hub-secret
+            callbackUrl: https://rhdh.apps.cluster-qr8h2.dynamic.redhatworkshops.io/api/auth/oidc/handler/frame
+            prompt: login
+            signIn:
+              resolvers:
+                - resolver: emailMatchingUserEntityProfileEmail
+                  dangerouslyAllowSignInWithoutUserInCatalog: true
+      dangerouslyAllowSignInWithoutUserInCatalog: true
+
+    signInPage: oidc
+
+    catalog:
+      providers:
+        keycloakOrg:
+          default:
+            baseUrl: "https://keycloak-rhdh-operator.apps.cluster-qr8h2.dynamic.redhatworkshops.io"
+            loginRealm: "rhdh"
+            realm: "rhdh"
+            clientId: rhdh
+            clientSecret: developer-hub-secret
+            schedule:
+              frequency: { minutes: 1 }
+              timeout: { minutes: 1 }
+              initialDelay: { seconds: 15 }
+            signIn:
+              resolvers:
+                - resolver: emailMatchingUserEntityProfileEmail
+                  dangerouslyAllowSignInWithoutUserInCatalog: true
+      locations:
+        - type: url
+          target: https://raw.githubusercontent.com/ysoni-redhat/RHDHSoftwareTemplate/refs/heads/main/catalog/catalog-info.yaml
+    scaffolder:
+      github:
+        token: ${GITHUB_TOKEN}
